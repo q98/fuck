@@ -17,6 +17,38 @@
             </div>
         </header>
 
+        <!-- Stripe Setup Modal -->
+        <div id="stripeSetupModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h2>🔐 Connect to Stripe</h2>
+                <p>Enter your Stripe API keys to get started. You can find these in your <a href="https://dashboard.stripe.com/apikeys" target="_blank">Stripe Dashboard</a>.</p>
+                
+                <div class="setup-form">
+                    <div class="input-group">
+                        <label for="setupPublishableKey">Publishable Key (pk_live_...)</label>
+                        <input type="text" id="setupPublishableKey" placeholder="pk_live_..." autocomplete="off">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="setupSecretKey">Secret Key (sk_live_...)</label>
+                        <input type="password" id="setupSecretKey" placeholder="sk_live_..." autocomplete="off">
+                        <small>Your secret key will be stored securely on the server</small>
+                    </div>
+                    
+                    <div class="setup-controls">
+                        <button id="saveStripeKeys" class="btn btn-success btn-large">
+                            💾 Save & Connect
+                        </button>
+                        <button id="testStripeKeys" class="btn btn-secondary">
+                            🧪 Test Keys
+                        </button>
+                    </div>
+                    
+                    <div id="setupStatus" class="setup-status"></div>
+                </div>
+            </div>
+        </div>
+
         <main>
             <!-- Terminal Connection Section -->
             <section class="terminal-section">

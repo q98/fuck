@@ -26,19 +26,29 @@ const feeBreakdown = document.getElementById('feeBreakdown');
 const baseAmountDisplay = document.getElementById('baseAmountDisplay');
 const stripeFeeDisplay = document.getElementById('stripeFeeDisplay');
 const totalAmountDisplay = document.getElementById('totalAmountDisplay');
+const stripeSetupModal = document.getElementById('stripeSetupModal');
+const setupPublishableKey = document.getElementById('setupPublishableKey');
+const setupSecretKey = document.getElementById('setupSecretKey');
+const saveStripeKeysBtn = document.getElementById('saveStripeKeys');
+const testStripeKeysBtn = document.getElementById('testStripeKeys');
+const setupStatus = document.getElementById('setupStatus');
 
 // Initialize the application
 async function init() {
     try {
         showLoading('Initializing...');
         
-        // Get Stripe configuration
+        // Check if Stripe is configured
         const configResponse = await fetch('/config');
-        stripeConfig = await configResponse.json();
+        const configData = await configResponse.json();
         
-        if (!stripeConfig.publishable_key || stripeConfig.publishable_key.includes('your_')) {
-            throw new Error('Please update your Stripe API keys in the .env file');
+        if (!configResponse.ok || !configData.configured) {
+            hideLoading();
+            showStripeSetup();
+            return;
         }
+        
+        stripeConfig = configData;
         
         // Initialize Stripe Terminal
         terminal = StripeTerminal.create({
@@ -51,8 +61,112 @@ async function init() {
         
     } catch (error) {
         console.error('Initialization error:', error);
-        showError('Failed to initialize: ' + error.message);
         hideLoading();
+        showStripeSetup();
+    }
+}
+
+// Show Stripe setup modal
+function showStripeSetup() {
+    stripeSetupModal.style.display = 'flex';
+}
+
+// Hide Stripe setup modal
+function hideStripeSetup() {
+    stripeSetupModal.style.display = 'none';
+}
+
+// Show setup status message
+function showSetupStatus(message, type = 'processing') {
+    setupStatus.className = `setup-status ${type}`;
+    setupStatus.innerHTML = message;
+}
+
+// Test Stripe keys
+async function testStripeKeys() {
+    const publishableKey = setupPublishableKey.value.trim();
+    const secretKey = setupSecretKey.value.trim();
+    
+    if (!publishableKey || !secretKey) {
+        showSetupStatus('Please enter both API keys', 'error');
+        return;
+    }
+    
+    if (!publishableKey.startsWith('pk_')) {
+        showSetupStatus('Publishable key should start with "pk_"', 'error');
+        return;
+    }
+    
+    if (!secretKey.startsWith('sk_')) {
+        showSetupStatus('Secret key should start with "sk_"', 'error');
+        return;
+    }
+    
+    try {
+        showSetupStatus('Testing API keys...', 'processing');
+        
+        const response = await fetch('/test-stripe-keys', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                publishable_key: publishableKey,
+                secret_key: secretKey
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showSetupStatus('✅ API keys are valid!', 'success');
+        } else {
+            showSetupStatus(`❌ Invalid keys: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        showSetupStatus(`❌ Error testing keys: ${error.message}`, 'error');
+    }
+}
+
+// Save Stripe keys
+async function saveStripeKeys() {
+    const publishableKey = setupPublishableKey.value.trim();
+    const secretKey = setupSecretKey.value.trim();
+    
+    if (!publishableKey || !secretKey) {
+        showSetupStatus('Please enter both API keys', 'error');
+        return;
+    }
+    
+    try {
+        showSetupStatus('Saving API keys...', 'processing');
+        
+        const response = await fetch('/save-stripe-keys', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                publishable_key: publishableKey,
+                secret_key: secretKey
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showSetupStatus('✅ Keys saved successfully! Initializing...', 'success');
+            
+            // Wait a moment then reinitialize
+            setTimeout(() => {
+                hideStripeSetup();
+                window.location.reload();
+            }, 2000);
+        } else {
+            showSetupStatus(`❌ Error saving keys: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        showSetupStatus(`❌ Error saving keys: ${error.message}`, 'error');
     }
 }
 
@@ -480,6 +594,8 @@ processPaymentBtn.addEventListener('click', processPayment);
 cancelPaymentBtn.addEventListener('click', cancelPayment);
 printReceiptBtn.addEventListener('click', printReceipt);
 newTransactionBtn.addEventListener('click', newTransaction);
+saveStripeKeysBtn.addEventListener('click', saveStripeKeys);
+testStripeKeysBtn.addEventListener('click', testStripeKeys);
 
 // Calculate and display fees when amount changes
 async function updateFeeCalculation() {

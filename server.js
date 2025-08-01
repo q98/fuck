@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -20,8 +21,11 @@ const allowedOrigins = [
 const STRIPE_FEE_PERCENTAGE = 0.029; // 2.9%
 const STRIPE_FEE_FIXED = 0.30; // $0.30
 
-// Initialize Stripe
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe (will be reinitialized when keys are saved)
+let stripe;
+if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('your_')) {
+  stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+}
 
 // Middleware
 app.use(cors({
@@ -83,6 +87,10 @@ app.post('/calculate-fees', (req, res) => {
 // Create a PaymentIntent for Stripe Terminal
 app.post('/create-payment-intent', async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(400).json({ error: 'Stripe not configured' });
+    }
+    
     const { amount, currency = 'usd' } = req.body;
     
     if (!amount || amount <= 0) {
@@ -121,6 +129,10 @@ app.post('/create-payment-intent', async (req, res) => {
 // Cancel a PaymentIntent
 app.post('/cancel-payment-intent', async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(400).json({ error: 'Stripe not configured' });
+    }
+    
     const { payment_intent_id } = req.body;
     
     const paymentIntent = await stripe.paymentIntents.cancel(payment_intent_id);
@@ -135,6 +147,10 @@ app.post('/cancel-payment-intent', async (req, res) => {
 // Get payment intent details
 app.get('/payment-intent/:id', async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(400).json({ error: 'Stripe not configured' });
+    }
+    
     const paymentIntent = await stripe.paymentIntents.retrieve(req.params.id);
     res.json(paymentIntent);
   } catch (error) {
@@ -146,6 +162,9 @@ app.get('/payment-intent/:id', async (req, res) => {
 // Create connection token for Stripe Terminal
 app.post('/connection_token', async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(400).json({ error: 'Stripe not configured' });
+    }
     const connectionToken = await stripe.terminal.connectionTokens.create();
     res.json({ secret: connectionToken.secret });
   } catch (error) {
@@ -154,16 +173,118 @@ app.post('/connection_token', async (req, res) => {
   }
 });
 
-// Get Stripe publishable key
+// Check if Stripe is configured and get publishable key
 app.get('/config', (req, res) => {
-  res.json({
-    publishable_key: process.env.STRIPE_PUBLISHABLE_KEY
-  });
+  const isConfigured = !!(
+    process.env.STRIPE_SECRET_KEY && 
+    process.env.STRIPE_PUBLISHABLE_KEY &&
+    !process.env.STRIPE_SECRET_KEY.includes('your_') &&
+    !process.env.STRIPE_PUBLISHABLE_KEY.includes('your_')
+  );
+  
+  if (isConfigured) {
+    res.json({
+      configured: true,
+      publishable_key: process.env.STRIPE_PUBLISHABLE_KEY
+    });
+  } else {
+    res.json({
+      configured: false,
+      message: 'Stripe API keys need to be configured'
+    });
+  }
+});
+
+// Test Stripe API keys
+app.post('/test-stripe-keys', async (req, res) => {
+  try {
+    const { publishable_key, secret_key } = req.body;
+    
+    if (!publishable_key || !secret_key) {
+      return res.status(400).json({ error: 'Both API keys are required' });
+    }
+    
+    // Test the secret key by creating a temporary Stripe instance
+    const testStripe = require('stripe')(secret_key);
+    
+    // Try to retrieve account information to validate the key
+    await testStripe.account.retrieve();
+    
+    // If we get here, the keys are valid
+    res.json({ 
+      valid: true, 
+      message: 'API keys are valid' 
+    });
+    
+  } catch (error) {
+    console.error('Error testing Stripe keys:', error);
+    res.status(400).json({ 
+      error: error.message || 'Invalid API keys' 
+    });
+  }
+});
+
+// Save Stripe API keys to .env file
+app.post('/save-stripe-keys', async (req, res) => {
+  try {
+    const { publishable_key, secret_key } = req.body;
+    
+    if (!publishable_key || !secret_key) {
+      return res.status(400).json({ error: 'Both API keys are required' });
+    }
+    
+    // Validate key formats
+    if (!publishable_key.startsWith('pk_')) {
+      return res.status(400).json({ error: 'Invalid publishable key format' });
+    }
+    
+    if (!secret_key.startsWith('sk_')) {
+      return res.status(400).json({ error: 'Invalid secret key format' });
+    }
+    
+    // Test the keys first
+    const testStripe = require('stripe')(secret_key);
+    await testStripe.account.retrieve();
+    
+    // Create .env content
+    const envContent = `STRIPE_SECRET_KEY=${secret_key}
+STRIPE_PUBLISHABLE_KEY=${publishable_key}
+PORT=${process.env.PORT || 3000}
+NODE_ENV=${process.env.NODE_ENV || 'production'}
+`;
+    
+    // Write to .env file
+    fs.writeFileSync('.env', envContent);
+    
+    // Update current process environment
+    process.env.STRIPE_SECRET_KEY = secret_key;
+    process.env.STRIPE_PUBLISHABLE_KEY = publishable_key;
+    
+    // Reinitialize Stripe with new keys
+    const stripe = require('stripe')(secret_key);
+    
+    console.log('✅ Stripe API keys updated successfully');
+    
+    res.json({ 
+      success: true, 
+      message: 'API keys saved successfully' 
+    });
+    
+  } catch (error) {
+    console.error('Error saving Stripe keys:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to save API keys' 
+    });
+  }
 });
 
 // List connected readers
 app.get('/readers', async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(400).json({ error: 'Stripe not configured' });
+    }
+    
     const readers = await stripe.terminal.readers.list();
     res.json(readers);
   } catch (error) {
