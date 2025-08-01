@@ -1,0 +1,32 @@
+STRIPE TERMINAL POS - SETUP INSTRUCTIONS
+=========================================
+
+1. CREATE .env FILE:
+   Create a file named ".env" in your project root with the following content:
+
+   STRIPE_SECRET_KEY=sk_test_your_actual_secret_key_here
+   STRIPE_PUBLISHABLE_KEY=pk_test_your_actual_publishable_key_here
+   PORT=3000
+
+2. GET YOUR STRIPE API KEYS:
+   - Go to https://dashboard.stripe.com
+   - Log in to your Stripe account (or create one)
+   - Navigate to Developers → API keys
+   - Copy your "Publishable key" (starts with pk_test_)
+   - Copy your "Secret key" (starts with sk_test_)
+   - Replace the placeholder values in your .env file
+
+3. START THE APPLICATION:
+   npm start
+
+4. OPEN IN BROWSER:
+   http://localhost:3000
+
+5. USING THE APP:
+   - Click "Discover Readers" to find terminals
+   - Select and connect to a reader
+   - Enter payment amount and process payments
+   - Generate and print receipts
+
+Note: The app currently runs in simulation mode for demo purposes.
+For production use with real terminals, see the README.md file.

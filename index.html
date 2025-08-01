@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stripe Terminal POS</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://js.stripe.com/terminal/v1/"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💳 Stripe Terminal POS</h1>
+            <div class="connection-status">
+                <span id="connectionStatus">Disconnected</span>
+                <div class="status-indicator" id="statusIndicator"></div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Terminal Connection Section -->
+            <section class="terminal-section">
+                <h2>Terminal Connection</h2>
+                <div class="terminal-controls">
+                    <button id="discoverReaders" class="btn btn-secondary">
+                        🔍 Discover Readers
+                    </button>
+                    <button id="connectReader" class="btn btn-primary" disabled>
+                        🔌 Connect to Reader
+                    </button>
+                    <button id="disconnectReader" class="btn btn-danger" disabled>
+                        ⚡ Disconnect Reader
+                    </button>
+                </div>
+                <div id="readersList" class="readers-list"></div>
+                <div id="connectedReader" class="connected-reader"></div>
+            </section>
+
+            <!-- Payment Section -->
+            <section class="payment-section">
+                <h2>Process Payment</h2>
+                <div class="payment-form">
+                    <div class="input-group">
+                        <label for="paymentAmount">Base Amount ($)</label>
+                        <input type="number" id="paymentAmount" step="0.01" min="0.01" placeholder="0.00">
+                    </div>
+                    
+                    <div id="feeBreakdown" class="fee-breakdown" style="display: none;">
+                        <h3>Payment Breakdown</h3>
+                        <div class="fee-line">
+                            <span>Base Amount:</span>
+                            <span id="baseAmountDisplay">$0.00</span>
+                        </div>
+                        <div class="fee-line">
+                            <span>Processing Fee (2.9% + $0.30):</span>
+                            <span id="stripeFeeDisplay">$0.00</span>
+                        </div>
+                        <div class="fee-line total">
+                            <span><strong>Total to Charge:</strong></span>
+                            <span id="totalAmountDisplay"><strong>$0.00</strong></span>
+                        </div>
+                    </div>
+                    
+                    <div class="payment-controls">
+                        <button id="processPayment" class="btn btn-success btn-large" disabled>
+                            💰 Charge Customer
+                        </button>
+                        <button id="cancelPayment" class="btn btn-danger" disabled>
+                            ❌ Cancel Payment
+                        </button>
+                    </div>
+                </div>
+
+                <div id="paymentStatus" class="payment-status"></div>
+            </section>
+
+            <!-- Receipt Section -->
+            <section class="receipt-section" id="receiptSection" style="display: none;">
+                <h2>Receipt</h2>
+                <div class="receipt" id="receipt">
+                    <!-- Receipt content will be generated here -->
+                </div>
+                <div class="receipt-controls">
+                    <button id="printReceipt" class="btn btn-primary">
+                        🖨️ Print Receipt
+                    </button>
+                    <button id="newTransaction" class="btn btn-secondary">
+                        🆕 New Transaction
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+            <p id="loadingText">Processing...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
