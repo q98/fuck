@@ -23,9 +23,18 @@ const STRIPE_FEE_FIXED = 0.30; // $0.30
 
 // Initialize Stripe (will be reinitialized when keys are saved)
 let stripe;
-if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('your_')) {
-  stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+function initializeStripe() {
+  if (process.env.STRIPE_SECRET_KEY && !process.env.STRIPE_SECRET_KEY.includes('your_')) {
+    stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    console.log('✅ Stripe initialized successfully');
+    return true;
+  }
+  console.log('⚠️ Stripe not initialized - missing or invalid API key');
+  return false;
 }
+
+// Initialize Stripe on startup
+initializeStripe();
 
 // Middleware
 app.use(cors({
@@ -162,13 +171,20 @@ app.get('/payment-intent/:id', async (req, res) => {
 // Create connection token for Stripe Terminal
 app.post('/connection_token', async (req, res) => {
   try {
+    console.log('📡 Connection token requested');
+    
     if (!stripe) {
-      return res.status(400).json({ error: 'Stripe not configured' });
+      console.error('❌ Stripe not initialized');
+      return res.status(400).json({ error: 'Stripe not configured. Please set up your API keys first.' });
     }
+    
+    console.log('🔑 Creating connection token...');
     const connectionToken = await stripe.terminal.connectionTokens.create();
+    console.log('✅ Connection token created successfully');
+    
     res.json({ secret: connectionToken.secret });
   } catch (error) {
-    console.error('Error creating connection token:', error);
+    console.error('❌ Error creating connection token:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -261,7 +277,7 @@ NODE_ENV=${process.env.NODE_ENV || 'production'}
     process.env.STRIPE_PUBLISHABLE_KEY = publishable_key;
     
     // Reinitialize Stripe with new keys
-    const stripe = require('stripe')(secret_key);
+    stripe = require('stripe')(secret_key);
     
     console.log('✅ Stripe API keys updated successfully');
     

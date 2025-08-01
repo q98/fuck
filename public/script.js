@@ -173,6 +173,8 @@ async function saveStripeKeys() {
 // Fetch connection token from backend
 async function fetchConnectionToken() {
     try {
+        console.log('🔑 Requesting connection token...');
+        
         const response = await fetch('/connection_token', {
             method: 'POST',
             headers: {
@@ -183,13 +185,24 @@ async function fetchConnectionToken() {
         const data = await response.json();
         
         if (!response.ok) {
+            console.error('❌ Connection token error:', data.error);
+            
+            // If Stripe is not configured, show setup modal
+            if (data.error.includes('not configured')) {
+                showStripeSetup();
+                throw new Error('Stripe not configured. Please set up your API keys.');
+            }
+            
             throw new Error(data.error || 'Failed to create connection token');
         }
         
-        console.log('Connection token created successfully');
+        console.log('✅ Connection token created successfully');
         return data.secret;
     } catch (error) {
-        console.error('Connection token error:', error);
+        console.error('❌ Connection token error:', error);
+        
+        // Show user-friendly error
+        showError('Failed to get connection token. Please check your Stripe configuration.');
         throw error;
     }
 }

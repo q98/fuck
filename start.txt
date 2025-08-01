@@ -1,0 +1,50 @@
+Linux Deployment Commands for 161.35.229.94:
+=============================================
+
+# Quick start (if you already have the files):
+npm install
+npm start
+
+# Full deployment from scratch:
+npm install
+chmod +x deploy.sh
+./deploy.sh
+
+# Manual start for production:
+NODE_ENV=production npm run start:prod
+
+# Check if server is running:
+curl http://161.35.229.94:3000/config
+
+# View logs:
+tail -f pos.log
+
+==============================================
+Windows Commands:
+==============================================
+
+# Install dependencies:
+npm install
+
+# Start server:
+npm start
+
+# Production mode:
+npm run start:prod
+
+==============================================
+Setup Process:
+==============================================
+
+1. Server starts without .env file (that's OK!)
+2. Open http://161.35.229.94:3000 in browser
+3. "Connect to Stripe" modal appears automatically
+4. Enter your Stripe API keys:
+   - Publishable Key (pk_live_...)
+   - Secret Key (sk_live_...)
+5. Click "Test Keys" to validate
+6. Click "Save & Connect" to store keys
+7. Server automatically creates .env file
+8. Ready to process payments!
+
+Get your Stripe keys at: https://dashboard.stripe.com/apikeys
